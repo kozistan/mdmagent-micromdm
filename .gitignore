@@ -1,0 +1,103 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+*.out
+
+# Package build artifacts
+*.pkg
+*.dmg
+*.app
+payload/
+build/
+tmp/
+
+# Test files
+test_*.json
+*.test
+.coverage
+htmlcov/
+
+# Configuration files with secrets
+config.local.*
+*.secret
+*.key
+*.pem
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+.cache/
+temp/
+
+# Lock files
+Pipfile.lock
+poetry.lock
+
+# Local development
+local/
+dev/
+sandbox/
+
+# Webhook specific
+webhook.db
+*.sqlite
+*.sqlite3
+
+# MDM specific
+device_*.json
+command_*.json
+response_*.json
+*.udid
+
+# System files
+/var/log/
+/tmp/
+*.pid
+*.lock

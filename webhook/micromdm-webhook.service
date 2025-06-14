@@ -1,0 +1,45 @@
+[Unit]
+Description=MDM Agent Webhook Service for microMDM
+After=network.target
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=microm
+Group=microm
+WorkingDirectory=/opt/mdm-agent-webhook
+ExecStart=/opt/mdm-agent-webhook/venv/bin/python -u /opt/mdm-agent-webhook/webhook.py
+
+# Environment variables
+Environment="WEBHOOK_HOST=0.0.0.0"
+Environment="WEBHOOK_PORT=5001"
+Environment="WEBHOOK_DEBUG=0"
+Environment="SERVER_URL=https://mdm.example.com"
+Environment="API_TOKEN=your-api-token-here"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mdm-webhook
+
+# Restart behavior
+Restart=always
+RestartSec=5
+StartLimitInterval=0
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/micromdm
+ReadWritePaths=/opt/mdm-agent-webhook
+
+# Process limits
+LimitNOFILE=65536
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
