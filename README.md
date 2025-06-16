@@ -1,6 +1,6 @@
 # MDM Agent for microMDM
 
-Centralized HTTP polling MDM agent with webhook feedback for microMDM systems.
+Centralized HTTP polling MDM agent with webhook feedback and user management for microMDM systems.
 
 ## Overview
 
@@ -9,12 +9,15 @@ This project provides an alternative to traditional MDM configuration profiles u
 ## Features
 
 - ✅ **HTTP Polling** - No configuration profiles required
-- ✅ **Command Execution** - test, hostname, shell commands  
+- ✅ **Command Execution** - test, hostname, shell commands
+- ✅ **User Management** - Create, disable, enable users remotely
+- ✅ **Password Management** - Set user passwords securely
 - ✅ **Webhook Feedback** - Real-time command results
 - ✅ **Hash Tracking** - Prevents command duplicates
 - ✅ **JSON Escaping** - Safe shell output processing
 - ✅ **Signed PKG** - Production-ready distribution
 - ✅ **LaunchDaemon** - Automatic startup
+- ✅ **Secure Config** - External credentials file
 
 ## Architecture
 
@@ -43,13 +46,28 @@ sudo installer -pkg mdmagent_http_installer.pkg -target /
 
 ```bash
 # Test command
-./deploy/send_command DEVICE_UDID test "Hello World"
+./tools/api/commands/send_command DEVICE_UDID test "Hello World"
 
 # Change hostname
-./deploy/send_command DEVICE_UDID hostname "new-device-name"
+./tools/api/commands/send_command DEVICE_UDID hostname "new-device-name"
 
 # Execute shell command
-./deploy/send_command DEVICE_UDID shell "brew install git"
+./tools/api/commands/send_command DEVICE_UDID shell "brew install git"
+
+# Create admin user
+./tools/api/commands/send_command DEVICE_UDID createuser "johndoe" "admin|mypassword123"
+
+# Create standard user
+./tools/api/commands/send_command DEVICE_UDID createuser "janedoe" "standard|userpass456"
+
+# Disable user
+./tools/api/commands/send_command DEVICE_UDID disableuser "johndoe"
+
+# Enable user
+./tools/api/commands/send_command DEVICE_UDID enableuser "johndoe"
+
+# Set user password
+./tools/api/commands/send_command DEVICE_UDID setpassword "johndoe" "newpassword"
 ```
 
 ### Monitor Results
@@ -57,6 +75,9 @@ sudo installer -pkg mdmagent_http_installer.pkg -target /
 ```bash
 # Watch webhook logs
 tail -f /var/log/micromdm/webhook.log
+
+# Watch agent logs
+tail -f /var/log/mdmagent.log
 ```
 
 ## Repository Structure
@@ -65,24 +86,20 @@ tail -f /var/log/micromdm/webhook.log
 mdmagent-micromdm/
 ├── README.md
 ├── LICENSE
-├── src/
-│   ├── mdmagent_http.sh          # Main agent script
-│   └── config/
-│       └── com.tolarcompany.mdmagent.http.plist
-├── build/
-│   ├── build_pkg.sh              # PKG builder script
-│   ├── payload/                  # PKG payload structure
-│   └── scripts/                  # Pre/post install scripts
+├── scripts/
+│   ├── mdmagent_http.sh          # Main agent script (v2.2)
+│   └── build_http_pkg.sh         # PKG builder script
+├── config/
+│   └── com.tolarcompany.mdmagent.http.plist
+├── tools/
+│   └── api/
+│       └── commands/
+│           └── send_command      # Command sender script
 ├── webhook/
 │   ├── webhook.py                # Flask webhook server
 │   ├── requirements.txt          # Python dependencies
 │   └── config/
 │       └── micromdm-webhook.service
-├── deploy/
-│   ├── send_command              # Command sender script
-│   └── scripts/
-│       ├── install.sh            # Deployment script
-│       └── uninstall.sh          # Removal script
 ├── docs/
 │   ├── installation.md           # Installation guide
 │   ├── configuration.md          # Configuration options
@@ -104,6 +121,7 @@ mdmagent-micromdm/
 - macOS 10.14+
 - Network access to repository server
 - Administrative privileges for installation
+- Command Line Tools (installed automatically)
 
 ### Repository Server
 - Web server (Apache/nginx) with HTTPS
@@ -114,12 +132,10 @@ mdmagent-micromdm/
 
 ### Agent Configuration
 
-Edit configuration in `src/config/mdmagent_config.sh`:
+Configuration is stored in `/etc/mdm/config` (created during installation):
 
 ```bash
-SERVER_URL="https://repo.example.com"
-POLL_INTERVAL=5
-MDM_ENDPOINT="https://mdm.example.com/webhook/command-result"
+# MDM Agent Configuration
 AUTH_USER="repouser"
 AUTH_PASS="your-password"
 ```
@@ -139,8 +155,7 @@ app.run(host='0.0.0.0', port=5001)
 
 ```bash
 # Build signed PKG
-cd build/
-./build_pkg.sh
+./build_http_pkg.sh
 
 # Output: mdmagent_http_installer.pkg
 ```
@@ -152,43 +167,67 @@ cd build/
 - **Developer certificate** for signing
 - **pkgbuild** and **productbuild** tools
 
-## Deployment
-
-### Mass Deployment
-
-```bash
-# Deploy to multiple devices
-./deploy/scripts/bulk_deploy.sh device_list.txt
-
-# Monitor deployment status
-./examples/monitoring.sh
-```
-
-### Manual Deployment
-
-```bash
-# Copy PKG to target device
-scp build/mdmagent_http_installer.pkg admin@target-device:~/
-
-# Install remotely
-ssh admin@target-device sudo installer -pkg ~/mdmagent_http_installer.pkg -target /
-```
-
 ## Command Types
 
-### Test Command
+### System Commands
+
+#### Test Command
 ```bash
-./deploy/send_command UDID test "Test message"
+./tools/api/commands/send_command UDID test "Test message"
 ```
 
-### Hostname Change
+#### Hostname Change
 ```bash
-./deploy/send_command UDID hostname "new-hostname"
+./tools/api/commands/send_command UDID hostname "new-hostname"
 ```
 
-### Shell Command
+#### Shell Command
 ```bash
-./deploy/send_command UDID shell "command to execute"
+./tools/api/commands/send_command UDID shell "command to execute"
+```
+
+### User Management Commands
+
+#### Create User
+```bash
+# Create admin user
+./tools/api/commands/send_command UDID createuser "username" "admin|password123"
+
+# Create standard user  
+./tools/api/commands/send_command UDID createuser "username" "standard|password123"
+```
+
+#### Disable/Enable User
+```bash
+# Disable user (sets shell to /usr/bin/false)
+./tools/api/commands/send_command UDID disableuser "username"
+
+# Enable user (sets shell to /bin/bash)
+./tools/api/commands/send_command UDID enableuser "username"
+```
+
+#### Set Password
+```bash
+./tools/api/commands/send_command UDID setpassword "username" "newpassword"
+```
+
+### JSON Command Format
+
+```json
+{
+  "commands": [
+    {
+      "type": "createuser",
+      "value": "johndoe", 
+      "parameter": "admin|mypassword123"
+    },
+    {
+      "type": "disableuser",
+      "value": "johndoe",
+      "parameter": ""
+    }
+  ]
+}
 ```
 
 ## Webhook Response Format
@@ -196,14 +235,33 @@ ssh admin@target-device sudo installer -pkg ~/mdmagent_http_installer.pkg -targe
 ```json
 {
     "device_udid": "58687F4F-898F-5153-9F83-88296A8111B0",
-    "command_type": "test",
-    "command_value": "Hello World",
+    "command_type": "createuser",
+    "command_value": "johndoe",
     "exit_code": 0,
-    "output": "Command executed successfully",
-    "timestamp": "2025-06-14T10:00:00Z",
+    "output": "User johndoe created successfully as admin user with UID 501",
+    "timestamp": "2025-06-16T10:00:00Z",
     "status": "success"
 }
 ```
+
+## Security Features
+
+- **HTTPS** for all communications
+- **Basic Authentication** for repository access
+- **Secure config file** (`/etc/mdm/config` with 600 permissions)
+- **User validation** (prevents system user modification)
+- **Command validation** before execution
+- **Audit logging** of all actions
+- **No hardcoded passwords** in scripts
+
+### User Management Security
+
+- Cannot modify system users (UID < 500)
+- Cannot modify current user
+- Cannot modify root user
+- Username format validation
+- Password requirements enforced
+- All changes logged
 
 ## Monitoring
 
@@ -228,24 +286,76 @@ tail -f /var/log/micromdm/webhook.log
 ls -la /tmp/processed_*
 ```
 
-## Security
+### User Management Monitoring
+```bash
+# List all users (excluding system users)
+dscl . -list /Users | grep -v '^_' | grep -v root
 
-- **HTTPS** for all communications
-- **Basic Authentication** for repository access
-- **Certificate pinning** available
-- **Command validation** before execution
-- **Audit logging** of all actions
+# Check user status
+dscl . -read /Users/username UserShell
+```
 
 ## Troubleshooting
 
-See [docs/troubleshooting.md](docs/troubleshooting.md) for common issues and solutions.
+### Common Issues
+
+#### Command Line Tools License
+If you encounter Xcode license errors, the PKG installer automatically attempts to resolve this. For manual resolution:
+
+```bash
+# Check Command Line Tools status
+xcode-select -p
+
+# Install if missing
+xcode-select --install
+```
+
+#### User Creation Failures
+Check logs for DS Error -14120:
+```bash
+tail -f /var/log/mdmagent.log | grep -E "(createuser|disableuser)"
+```
+
+#### Config File Missing
+```bash
+# Verify config exists
+ls -la /etc/mdm/config
+
+# Recreate if missing
+sudo mkdir -p /etc/mdm
+sudo tee /etc/mdm/config << EOF
+AUTH_USER="repouser"  
+AUTH_PASS="your-password"
+EOF
+sudo chmod 600 /etc/mdm/config
+```
+
+See [docs/troubleshooting.md](docs/troubleshooting.md) for detailed solutions.
+
+## Version History
+
+### v2.2 (Current)
+- ✅ User management commands (createuser, disableuser, enableuser)
+- ✅ Password management (setpassword) 
+- ✅ Security validations for user operations
+- ✅ Improved error handling
+
+### v2.1
+- ✅ Secure external configuration file
+- ✅ Command Line Tools integration
+- ✅ Improved PKG installer
+
+### v2.0
+- ✅ HTTP polling architecture
+- ✅ Webhook feedback system
+- ✅ Signed PKG distribution
 
 ## Contributing
 
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
+2. Create feature branch (`git checkout -b feature/user-management`)
+3. Commit changes (`git commit -m 'Add user management features'`)
+4. Push to branch (`git push origin feature/user-management`)
 5. Open Pull Request
 
 ## License
@@ -260,4 +370,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ for macOS fleet management**
+
