@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Stop existing services if running
+echo "Checking for existing MDM Agent services..."
+
+# Stop old profile-based agent
+if launchctl list | grep -q "com.tolarcompany.mdmagent"; then
+    echo "Stopping old profile-based MDM Agent..."
+    launchctl unload /Library/LaunchDaemons/com.tolarcompany.mdmagent.plist 2>/dev/null || true
+fi
+
+# Stop HTTP agent if exists
+if launchctl list | grep -q "com.tolarcompany.mdmagent.http"; then
+    echo "Stopping existing HTTP MDM Agent..."
+    launchctl unload /Library/LaunchDaemons/com.tolarcompany.mdmagent.http.plist 2>/dev/null || true
+fi
+
+# Remove old files
+echo "Cleaning old installations..."
+rm -f /Library/Management/MDMAgent/mdmagent.sh 2>/dev/null || true
+rm -f /Library/Management/MDMAgent/mdmagent_http.sh 2>/dev/null || true
+rm -f /Library/LaunchDaemons/com.tolarcompany.mdmagent.plist 2>/dev/null || true
+rm -f /tmp/mdmagent.lock 2>/dev/null || true
+
+# Clean any remaining temp files
+rm -f /tmp/commands_response.json 2>/dev/null || true
+rm -f /tmp/mdm_test_result.txt 2>/dev/null || true
+rm -f /tmp/mdm_shell_result.txt 2>/dev/null || true
+
+echo "Preinstall completed"
+exit 0

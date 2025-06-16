@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# Create config directory and file
+echo "Setting up MDM Agent configuration..."
+mkdir -p /etc/mdm
+chmod 700 /etc/mdm
+
+# Create config file if it doesn't exist
+if [ ! -f /etc/mdm/config ]; then
+    echo "Creating new config file..."
+    cat > /etc/mdm/config << CONFIGEOF
+# MDM Agent Configuration
+AUTH_USER="repouser"
+AUTH_PASS="your-password"
+CONFIGEOF
+else
+    echo "Config file already exists, preserving current settings"
+    # Verify it has required keys
+    if ! grep -q "AUTH_USER" /etc/mdm/config || ! grep -q "AUTH_PASS" /etc/mdm/config; then
+        echo "Config file incomplete, adding missing credentials..."
+        echo "" >> /etc/mdm/config
+        echo "# Added during package installation" >> /etc/mdm/config
+        grep -q "AUTH_USER" /etc/mdm/config || echo 'AUTH_USER="repouser"' >> /etc/mdm/config
+        grep -q "AUTH_PASS" /etc/mdm/config || echo 'AUTH_PASS="your-password"' >> /etc/mdm/config
+    fi
+fi
+
+# Secure config file
+chmod 600 /etc/mdm/config
+chown root:wheel /etc/mdm/config
+
+# Set correct permissions
+echo "Setting file permissions..."
+chown root:wheel /Library/Management/MDMAgent/mdmagent_http.sh
+chmod +x /Library/Management/MDMAgent/mdmagent_http.sh
+chown root:wheel /Library/LaunchDaemons/com.tolarcompany.mdmagent.http.plist
+chmod 644 /Library/LaunchDaemons/com.tolarcompany.mdmagent.http.plist
+
+# Load and start HTTP service
+echo "Starting HTTP MDM Agent service..."
+launchctl load /Library/LaunchDaemons/com.tolarcompany.mdmagent.http.plist
+
+# Wait for service to start
+sleep 3
+
+# Get device UDID for logging
+DEVICE_UDID=$(system_profiler SPHardwareDataType | grep "Hardware UUID" | awk '{print $3}')
+
+# Log installation
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] HTTP MDM Agent installed via PKG - Device: $DEVICE_UDID" >> /var/log/mdmagent.log
+
+# Test connectivity
+echo "Testing connectivity to repo.example.com..."
+if curl -s -u "repouser:your-password" --connect-timeout 5 https://repo.example.com/commands/ >/dev/null 2>&1; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Connectivity test to repo.example.com: SUCCESS" >> /var/log/mdmagent.log
+    echo " HTTP MDM Agent installation completed successfully!"
+    echo " Agent will poll: https://repo.example.com/commands/$DEVICE_UDID.json"
+else
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Connectivity test to repo.example.com: FAILED" >> /var/log/mdmagent.log
+    echo "  HTTP MDM Agent installed but connectivity test failed"
+    echo " Check network connectivity to repo.example.com"
+fi
+
+echo " Installation complete! Monitor logs with: tail -f /var/log/mdmagent.log"
+echo " Config file created at: /etc/mdm/config"
+exit 0

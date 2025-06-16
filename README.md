@@ -87,8 +87,10 @@ mdmagent-micromdm/
 ├── README.md
 ├── LICENSE
 ├── scripts/
-│   ├── mdmagent_http.sh          # Main agent script (v2.2)
-│   └── build_http_pkg.sh         # PKG builder script
+│   ├── mdmagent_http.sh
+│   ├── preinstall       # ← Nový file
+│   ├── postinstall      # ← Nový file 
+│   └── build_http_pkg.sh
 ├── config/
 │   └── com.tolarcompany.mdmagent.http.plist
 ├── tools/
